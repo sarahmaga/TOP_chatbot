@@ -1,0 +1,815 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mobile-forms
+  processKey="CD_WMS_conferencia_emb_rec"
+  xmlns="http://www.davinti.com.br/vitruvio/mobile-form"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.davinti.com.br/vitruvio/mobile-form https://bitbucket.org/davinTI/vitruvio-xds/raw/develop/vitruvio-mobile-form.xsd">
+
+  <form formKey='formConferencia'>
+    <name>Process_1</name>
+    <description>Etapa de execução mobile</description>
+
+    <Autoload>
+      <variables autoInjectionScope='ENGINE_GLOBAL_SCOPE' autoPersist='true'>
+        <variable>id</variable>
+      </variables>
+      <bridges>
+        <bridge bridgeId='eansParser' autoInjectionVariableName='eansParser'
+          autoInjectionScope='ENGINE_GLOBAL_SCOPE' autoPersist='true' autoOverride='true' />
+      </bridges>
+    </Autoload>
+    <ServerSide>
+      <Bridges>
+        <Bridge language='JavaScript' id='eansParser'>
+            <![CDATA[
+              function execute(params) {
+                /* Script do calculo */
+                importClass(Packages.br.com.davinti.vitruvio.domain.sistema.script.Linguagem);
+                var script = vScriptLibraryService.getScript('ean_parser' , Linguagem.JAVASCRIPT);
+                var value = script.getScript().replaceAll(/\*([^*]|[\r\n]|(\*([^/]|[\r\n])))*\*/, "").trim();
+                return {script: String(value)};
+              }
+            ]]>
+          </Bridge>
+        <Bridge id='getIdWMS' language='JavaScript'>
+          <![CDATA[
+            function execute(params){
+              var db = libService.loadScript('db');
+              var banco = new db('superus_producao');
+
+              if(params.login) {
+                var sql = 'SELECT CODIGO_WMS, NOME, USUARIO_ID FROM VERDEMAR.VI_USUARIOS_VITRUVIO VI WHERE VI.LOGIN = :login ';
+                var result = banco.queryRow(sql, params);
+                if(result.CODIGO_WMS && result.CODIGO_WMS != ''){
+									if(result.NOME && result.NOME != ''){
+										return {valido: true, nome: result.NOME, codigo: result.CODIGO_WMS};
+									}
+									return {valido: false, msg: 'Usuário não possui nome cadastrado!'};
+								} else {
+									return {valido: false, msg: 'Usuário não possui conta wms cadastrado!'};
+								}
+              }
+              return {valido: false, msg: 'Erro ao validar usuário executor!'}
+            }
+          ]]>
+       </Bridge>
+        <Bridge language='JavaScript' id='bridgeRetornarAtividadeGrupo'>
+        <![CDATA[
+          function execute(params) {
+            vProcessInstanceService.removeTaskAssignee(params.logged, params.taskId);
+          }
+        ]]>
+      </Bridge>
+      </Bridges>
+    </ServerSide>
+    <initScript language='JavaScript'>
+			<![CDATA[
+				function run() {
+					var result = engine.getGlobalVariable('eansParser');
+					var reader = scriptService.parseLibrary(result.script);
+					engine.setGlobalVariable('libEan', reader);
+				}
+			]]>
+		</initScript>
+    <validators>
+      <ScriptValidator execution='COMPLETE' language='JavaScript' id='validadorItem'>
+				<![CDATA[
+					function Validator() {
+						var msg;
+
+							this.getMessage = function() {
+							return msg;
+							};
+
+              this.isValid = function (valid) {
+                return valid(true);
+                var fimDaAtividade = engine.getGlobalVariable("fimDaAtividade");
+
+                if (!fimDaAtividade) {
+                  msg =
+                    "Você não pode completar essa atividade, existem produtos para conferir!";
+                  return valid(false);
+                }
+
+                /*
+                engine.searchSubFormList(
+                  "divergente == :divergente",
+                  { divergente: 1 },
+                  function (item) {
+                    console.log(item);
+                    if (item) {
+                      MessageBox.show(
+                        "ATENÇÃO - DIVERGÊNCIA NA CONFERÊNCIA",
+                        "Conferência finalizada com divergência, Atividade gerada para outro usuário!"
+                      );
+                    } else {
+                      MessageBox.show(
+                        "ATENÇÃO - SUCESSO NA CONFERÊNCIA",
+                        "Conferência realizada com Sucesso!"
+                      );
+                    }
+                  }
+                );
+                setTimeout(function () {
+                  return valid(true);
+                }, 2000);*/
+              };
+					};
+					var validator = new Validator();
+				]]>
+			</ScriptValidator>
+    </validators>
+    <components>
+      <VerticalLayout width='100%' spacing='true' margin='true'>
+        <SubForm formKey='coletaItens' fastSearchAutoOpen='true'>
+          <name>Coleta</name>
+          <initScript language='JavaScript'>
+            <![CDATA[
+              // Constrole de campos pesavel ou não
+              function visibleFields() {
+                var idwms = engine.getGlobalVariable('idwms');
+                engine.getField('temembtransf').setValue('N');
+                if(engine.getField('flagceasa').getValue() == 1){
+                    engine.getField('datavalidade').setVisible(true);
+                    engine.getField('confean13').setVisible(true);
+                    engine.getField('qtdemb').setVisible(true);
+                    engine.getField('ean13').setVisible(true);
+                    engine.getField('quantidade_conf').setVisible(true);
+                    engine.getField('quantidade_conf').setRequired(true);
+                    engine.getField('loja').setVisible(true);
+                    engine.getField('ordem').setVisible(false);
+                    engine.getField('numeronota').setVisible(false);
+                    engine.getField('normacomprapadrao').setVisible(false);
+                    engine.getField('fornecedor').setVisible(false);
+                    engine.getField('dun14').setVisible(false);
+
+                    engine.getField('altura').setVisible(false);
+                    engine.getField('pesobruto').setVisible(false);
+                    engine.getField('largura').setVisible(false);
+                    engine.getField('compr').setVisible(false);
+                    engine.getField('plbase').setVisible(false);
+                    engine.getField('plaltura').setVisible(false);
+
+                    engine.getField('transfpeso').setVisible(false);
+                    engine.getField('transfaltura').setVisible(false);
+                    engine.getField('transflargura').setVisible(false);
+                    engine.getField('transfcompr').setVisible(false);
+                    engine.getField('transfpaltura').setVisible(false);
+                    engine.getField('transfpbase').setVisible(false);
+                    engine.getField('embtransf').setVisible(false);
+                    engine.getField('transfqtdemb').setVisible(false);
+                    return;
+                }
+                //engine.getField('temembtransf').setVisible(false);
+                if(engine.getField('tipo').getValue() == 'PARCIAL'){
+                  engine.getField('altura').setVisible(false);
+                  engine.getField('pesobruto').setVisible(false);
+                  engine.getField('largura').setVisible(false);
+                  engine.getField('confean13').setVisible(true);
+                  engine.getField('dun14').setVisible(true);
+                  engine.getField('qtdemb').setVisible(true);
+                  engine.getField('compr').setVisible(false);
+                  engine.getField('plbase').setVisible(false);
+                  engine.getField('plaltura').setVisible(false);
+
+                  if(engine.getField('checartransferencia').getValue() == 1){
+                    engine.getField('transfpeso').setVisible(false);
+                    engine.getField('transfaltura').setVisible(false);
+                    engine.getField('transflargura').setVisible(false);
+                    engine.getField('transfcompr').setVisible(false);
+                    engine.getField('transfpaltura').setVisible(false);
+                    engine.getField('transfpbase').setVisible(false);
+                    engine.getField('embtransf').setVisible(true);
+                    engine.getField('transfqtdemb').setVisible(true);
+                  } else {
+                    engine.getField('transfpeso').setVisible(false);
+                    engine.getField('transfaltura').setVisible(false);
+                    engine.getField('transflargura').setVisible(false);
+                    engine.getField('transfcompr').setVisible(false);
+                    engine.getField('transfpaltura').setVisible(false);
+                    engine.getField('transfpbase').setVisible(false);
+                    engine.getField('embtransf').setVisible(false);
+                    engine.getField('transfqtdemb').setVisible(false);
+                  }
+                } else {
+                  engine.getField('pesobruto').setVisible(true);
+                  engine.getField('altura').setVisible(true);
+                  engine.getField('largura').setVisible(true);
+                  engine.getField('confean13').setVisible(true);
+                  engine.getField('dun14').setVisible(true);
+                  engine.getField('qtdemb').setVisible(true);
+                  engine.getField('compr').setVisible(true);
+                  engine.getField('plbase').setVisible(true);
+                  engine.getField('plaltura').setVisible(true);
+
+                  if(engine.getField('checartransferencia').getValue() == 1){
+                    engine.getField('transfpeso').setVisible(true);
+                    engine.getField('transfaltura').setVisible(true);
+                    engine.getField('transflargura').setVisible(true);
+                    engine.getField('transfcompr').setVisible(true);
+                    engine.getField('transfpaltura').setVisible(true);
+                    engine.getField('transfpbase').setVisible(true);
+                    engine.getField('embtransf').setVisible(true);
+                    engine.getField('transfqtdemb').setVisible(true);
+                  } else {
+                    engine.getField('transfpeso').setVisible(false);
+                    engine.getField('transfaltura').setVisible(false);
+                    engine.getField('transflargura').setVisible(false);
+                    engine.getField('transfcompr').setVisible(false);
+                    engine.getField('transfpaltura').setVisible(false);
+                    engine.getField('transfpbase').setVisible(false);
+                    engine.getField('embtransf').setVisible(false);
+                    engine.getField('transfqtdemb').setVisible(false);
+                  }
+                }
+                engine.getField('idwms').setValue(Number(idwms));
+
+                var ean = engine.getField('confean13').getValue();
+                if(!ean){
+                  setTimeout(() => {
+                    engine.getField('confean13').focus();
+                  }, 250);
+                }
+              }
+              function validarEan(){
+                function criarEanPesquisa(eanStr) {
+									var ean = null;
+
+									var reader  = engine.getGlobalVariable('libEan');
+									var info 	= new reader(eanStr);
+									var parsed  = info.getResult();
+
+									var eanConf = parsed.codigo;
+
+									return ',' + eanConf + ',';
+								}
+
+								function isEanDoItem(ean) {
+									var eanItem  = engine.getField('ean13').getValue();
+									return (eanItem && eanItem.indexOf(ean) >= 0);
+								}
+
+								function eanNaoEncontrado(){
+									engine.playStop();
+                  MessageBox.show('Atenção!', 'Código de Barras inválido para esse item. Verifique!', function(){
+                    engine.getField('confean13').setValue(null);
+										engine.getField('confean13').focus();
+									});
+
+								}
+								function eanEncontrado(item, ean_encontrado){
+									var ean_digitado = (engine.getField('confean13').prefix == null || engine.getField('confean13').prefix == undefined);
+									engine.setSubFormListSelectedItem(item);
+									if(!ean_digitado || engine.getField('confean13').prefix == null || engine.getField('confean13').prefix == undefined){
+										engine.getField('confean13').setValue(ean_encontrado);
+
+									}
+								}
+							  function removeLeadingZeros(str) {
+                  return str.replace(/^0{1,4}/, '');
+               }
+								var ean_conf = engine.getField('confean13').getValue();
+                var ean_size = String(ean_conf).length;
+								var ean_qtd = 0;
+								var ean_qtd_unidade = 0;
+								var ean_conf_original = ean_conf;
+								var e_ean_conf_24 = 0;
+								var ini_ean = ean_conf.substring(0,3);
+								if (ean_size == 24 && ini_ean == '789') {
+									e_ean_conf_24 = 1;
+									ean_conf_24 = ean_conf.substring(0,13);
+								}
+
+								var veanClone = engine.getField('confean13').getValue();
+								engine.getField('ean_clone').setValue(veanClone);
+								ean_conf_original = removeLeadingZeros(ean_conf_original);
+                ean_conf = removeLeadingZeros(ean_conf);
+								var pesquisa_ean = ',' + (ean_conf_original) + ',';
+								console.log(ean_conf)
+								console.log(pesquisa_ean);
+								console.log(ean_conf_original);
+								if (ean_conf == undefined || ean_conf == null || ean_conf == '') {
+									eanNaoEncontrado();
+									return false;
+								} else {
+									if ((!isEanDoItem(ean_conf)) && ((ean_conf) != '') && ((ean_conf) != '0')) {
+										var pesq_ean = ',' + ean_conf + ',';
+										if (e_ean_conf_24 == 1) {
+											pesq_ean = ',' + ean_conf_24 + ',';
+										}
+                    //engine.setGlobalVariable('eanValido', false);
+                    //eanNaoEncontrado();
+
+										var params = {ean_conf: pesq_ean};
+                    console.log(pesq_ean)
+										engine.searchSubFormList(':ean_conf in ean13', params, function(res){
+											var item = res;
+											if(item && item._status == 'incomplete'){
+												eanEncontrado(item, ean_conf_original);
+												engine.setGlobalVariable('eanValido', true);
+                        engine.getGlobalVariable('visibleFields')();
+
+											}else{
+												engine.setGlobalVariable('eanValido', false);
+												eanNaoEncontrado();
+											}
+										});
+									}else{
+
+										if( (isEanDoItem(pesquisa_ean)) && ((ean_conf) != '') ) {
+											engine.setGlobalVariable('eanValido', true);
+                      console.log('isEanDoItem');
+                      if(engine.getField('checartransferencia').getValue() == 1){
+                        console.log('checartransferencia == 1');
+                        engine.getField('temembtransf').setValue('S');
+                      } else {
+                        console.log('checartransferencia == 0');
+
+                        engine.getField('temembtransf').setValue('N');
+                      }
+											if (ean_qtd > 0) {
+												setTimeout(function(){
+													engine.getField('confean13').focus();
+												},1000);
+											} else {
+												engine.getField('dun14').focus();
+											}
+                      engine.getGlobalVariable('visibleFields')();
+											return true;
+										}else{
+											if (ean_conf && ean_conf != 0) {
+												engine.setGlobalVariable('eanValido', false);
+												eanNaoEncontrado();
+											}
+											return false;
+										}
+										engine.setGlobalVariable('eanValido', true);
+                    engine.getGlobalVariable('visibleFields')()
+										return true;
+									}
+								}
+							}
+
+              // id wms - usuario
+              function getIdWMS() {
+                var params = { login: engine.getLoggedUser().getLogin() };
+                vCommunicationService
+                  .executeOnServer('getIdWMS', params)
+                  .then((result) => {
+                    if(result.codigo) {
+                      engine.setGlobalVariable('idwms', result.codigo);
+                      engine.getField('idwms').setValue(Number(result.codigo));
+                      console.log('__bridge getIdWMS sucess : ' + result.codigo);
+                    } else {
+                      console.log('__bridge getIdWMS error msg : ' + result.msg);
+                      MessageBox.show('Usuário executor inválido', result.msg);
+                      engine.getGlobalVariable('retornaAtivadaParaGrupo')();
+                    }
+                    return true;
+                  })
+                  .catch((error) => {
+                    console.log('__Erro na bridge getIdWMS => ', error);
+                    MessageBox.show('Usuário executor inválido', 'Erro ao validar executor! Verifique se você está online!' , function() {
+                      engine.getGlobalVariable('retornaAtivadaParaGrupo')();
+
+                    });
+                  });
+              }
+
+              var retornaAtivadaParaGrupo = function () {
+                var logged = engine.getLoggedUser().getLogin();
+                var taskId = engine.getTaskId();
+
+                var params = {
+                  logged: logged,
+                  taskId: taskId,
+                };
+
+                engine.daoControlProvider
+                  .invokeBridgeOnServer(engine.model, 'bridgeRetornarAtividadeGrupo', params)
+                  .then((result) => {
+                    if (result) {
+                      console.log(
+                        '___invokeBridgeOnServer-bridgeRetornarAtividadeGrupo___retornaAtivadaParaGrupo'
+                      );
+                      engine.doFormClose();
+                    }
+                  })
+                  .catch((error) => {
+                    console.log('__ERRO: Não transferiu a tarefa: ' + error);
+                  });
+              };
+
+
+              function setarVariaveisGlobais() {
+                engine.setGlobalVariable(
+                  'retornaAtivadaParaGrupo',
+                  retornaAtivadaParaGrupo
+                );
+                engine.setGlobalVariable('validarEan', validarEan);
+                engine.setGlobalVariable('visibleFields', visibleFields);
+              }
+
+              // FIM - Valida usuário ao iniciar conferencia do item
+              function verifyActiveFinish() {
+                setTimeout(() => {
+                engine.getSubFormListSizeByStatus(function(count){
+                  var fimDaAtividade = Boolean(count=='0');
+                  engine.setGlobalVariable('fimDaAtividade', fimDaAtividade);
+
+                  if(fimDaAtividade) {
+                      engine.doFormComplete(function (result) {});
+                    } else {
+                      getIdWMS();
+                    }
+
+                  }, "incomplete");
+                }, 1000);
+              }
+              function run() {
+                setarVariaveisGlobais();
+                verifyActiveFinish();
+                engine.getGlobalVariable('visibleFields')();
+                engine.getField('confean13').setRequired(true);
+                engine.getField('qtdemb').setRequired(true);
+              }
+            ]]>
+          </initScript>
+          <validators>
+            <ScriptValidator execution='COMPLETE' language='JavaScript' id='validadorItem'>
+              <![CDATA[
+                function Validator() {
+                  var msg;
+
+                  this.getMessage = function () {
+                    return msg;
+                  };
+                  this.isValid = function (valid) {
+                    return valid(true);
+                  };
+                };
+
+                var validator = new Validator();
+              ]]>
+            </ScriptValidator>
+          </validators>
+          <ItemList addItemButtonCaption="Coletar" caption="Lista de itens"
+            navActionButtonsVisible="true">
+            <property id="codigo" caption="Código" />
+            <property id="nome" caption="Descrição" />
+            <property id="numeronota" caption="Nota" />
+            <property id="fornecedor" caption="Fornecedor" />
+            <property id="tipo" caption="Tipo" />
+          </ItemList>
+          <components>
+            <VerticalLayout width='100%' spacing='true' margin='true'>
+              <NumericField id='idwms' type='number' visible='false'></NumericField>
+              <!-- Campos separação visiveis com dados da separação -->
+              <NumericField id="codigo" caption="Código" visible="false" readOnly="true"
+                type="number" />
+              <TextField id="ordem" caption="Ordem" readOnly="true" type="string" />
+              <TextArea id="loja" caption="Loja" readOnly="true" type="string" visible="false" />
+              <TextArea id="nome" caption="Descrição" readOnly="true"
+                type="string" />
+              <TextField id="numeronota" caption="Nota" type="string"
+                readOnly="true" />
+              <TextField id="ean13" caption="EAN13" type="string" maxLength="200"
+                visible="false" readOnly="true" />
+              <TextField id="chaveitem" caption="Chave Item" visible="false"
+                type="string" readOnly="true" />
+              <TextField id="chaveentrada" caption="CHAVE ENTRADA"
+                visible="false" type="string" readOnly="true" />
+              <TextField id="fornecedor" caption="Fornecedor" type="string"
+                readOnly="true" />
+              <TextField id="tipo" caption="Tipo" visible="false" type="string"
+                readOnly="true" />
+              <NumericField id="checartransferencia" caption="Checar Transferência"
+                visible="false" type="number" readOnly="true" />
+              <NumericField id="chaveor" caption="Chave Ordem" visible="false" type="number"
+                readOnly="true" />
+              <NumericField id="lastro" caption="Lastro" visible="false" type="number"
+                readOnly="true" />
+              <NumericField id="camada" caption="Camada" visible="false" type="number"
+                readOnly="true" />
+              <NumericField id="lastro_transf" caption="Lastro Transf" visible="false"
+                type="number" readOnly="true" />
+              <NumericField id="camada_transf" caption="Camada Transf" visible="false"
+                type="number" readOnly="true" />
+              <TextField id="normacomprapadrao" caption="Norma" type="string" readOnly="true" />
+
+              <!-- Campos conferência visiveis para conferência pesavel -->
+              <Barcode id="confean13" caption='Ean 13' type='string' required='true'
+                library='zbar' prefix='' suffix=''
+                allowElevationForGroups=''>
+                <events>
+                  <valueChange>
+                    <script language='JavaScript'>
+                                <![CDATA[
+                                  function run() {
+                                    engine.getGlobalVariable('validarEan')();
+                                  }
+                                ]]>
+                              </script>
+                  </valueChange>
+                </events>
+              </Barcode>
+              <Barcode id="dun14" caption='DUN14' type='string'
+                library='zbar' prefix='' suffix=''
+                allowElevationForGroups=''>
+                <events>
+                  <valueChange>
+                    <script language='JavaScript'>
+                      <![CDATA[
+                        function run() {
+                          var dun14 = engine.getField('dun14').getValue();
+                          if(dun14){
+                            if(dun14.length > 29){
+                                dun14 = dun14.substring(0,14);
+                            } else if(dun14.length > 14 || !Number(dun14)){
+                                engine.getField('dun14').setValue(null);
+                                MessageBox.show('Dun 14 Inválido!');
+                            }
+                          }
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </Barcode>
+              <NumericField id="qtdemb" caption="Quant Emb" required="true" type="number">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                          var qtd = engine.getField('qtdemb').getValue();
+                          if(!qtd || qtd < 1 || qtd > 10000){
+                            engine.getField('qtdemb').setValue(null);
+                            MessageBox.show('Quantidade da Embalagem Inválida!');
+                          }
+                          if(engine.getField('quantidade_conf').isVisible())
+                            engine.getField('quantidade_conf').focus();
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </NumericField>
+              <DecimalField id="pesobruto" caption="Peso" format="###,##0.000" maxLength="10"
+                type="decimal">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                        <![CDATA[
+                          function run(){
+                          var peso = engine.getField('pesobruto').getValue();
+                          //if(peso != 0 && engine.getField('tipo').getValue() == 'PARCIAL' ) {
+                              if(peso < 0.100 || peso > 1000){
+                                engine.getField('pesobruto').setValue(null);
+                                MessageBox.show("Peso bruto inválido.");
+                              }
+                          //}
+                          }
+                        ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </DecimalField>
+              <DecimalField id="altura" caption="Altura cm" format="#,##0.0" maxLength="10"
+                type="decimal">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var altura = engine.getField('altura').getValue();
+                            if(!altura || altura < 0.100 || altura > 9999999){
+                              engine.getField('altura').setValue(null);
+                              MessageBox.show("Altura inválida.");
+                            }
+                        }
+                      ]]>
+                      </script>
+                  </valueChange>
+                </events>
+              </DecimalField>
+              <DecimalField id="largura" caption="Largura cm" format="#,##0.0" maxLength="5"
+                type="decimal">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var largura = engine.getField('largura').getValue();
+                            if(!largura || largura < 0.100 || largura > 9999999){
+                              engine.getField('largura').setValue(null);
+                              MessageBox.show("Largura inválida.");
+                            }
+                        }
+                      ]]>
+                  </script>
+                  </valueChange>
+                </events>
+              </DecimalField>
+              <DecimalField id="compr" caption="Comprimento" format="#,##0.0" maxLength="5"
+                type="decimal">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var compr = engine.getField('compr').getValue();
+                            if(!compr || compr < 0.100 || compr > 9999999){
+                              engine.getField('compr').setValue(null);
+                              MessageBox.show("Comprimento inválido.");
+                            }
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </DecimalField>
+              <NumericField id="plbase" caption="Lastro" type="number">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var plbase = engine.getField('plbase').getValue();
+                            if(!plbase || plbase < 0.100 || plbase > 9999999){
+                              engine.getField('plbase').setValue(null);
+                              MessageBox.show("Base Pallet inválida.");
+                            }
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </NumericField>
+              <NumericField id="plaltura" caption="Camada" type="number">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                        <![CDATA[
+                          function run(){
+                              var plaltura = engine.getField('plaltura').getValue();
+                              if(!plaltura || plaltura < 0.100 || plaltura > 9999999){
+                                engine.getField('plaltura').setValue(null);
+                                MessageBox.show("Altura Pallet inválida.");
+                              }
+                          }
+                        ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </NumericField>
+              <OptionGroup id="temembtransf" caption="Existe Emb. Transf" required="true"
+                visible="false"
+                type="string">
+                <entry value="Sim" key="S" />
+                <entry value="Não" key="N" />
+              </OptionGroup>
+              <NumericField id="embtransf" caption="DUN14 Transf" type="number" visible="false" />
+              <NumericField id="transfqtdemb" caption="Embalagem Transf" type="number"
+                visible="false" />
+              <DecimalField id="transfpeso" caption="Peso Transf" format="###,##0.000"
+                maxLength="10" type="decimal" />
+              <DecimalField id="transfaltura" caption="Altura Transf" format="#,##0.0"
+                maxLength="5" type="decimal" />
+              <DecimalField id="transflargura" caption="Largura Transf" format="#,##0.0"
+                maxLength="5" type="decimal" />
+              <DecimalField id="transfcompr" caption="Comprimento Transf" format="#,##0.0"
+                maxLength="5" type="decimal" />
+              <NumericField id="transfpbase" caption="Lastro Transf" type="number">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var valor = engine.getField('transfpbase').getValue();
+                            if(valor){
+                              if(valor < 0.100 || valor > 999999){
+                                  engine.getField('transfpbase').setValue(null);
+                                  MessageBox.show('Base Pallet Transf. Inválida!');
+                              }
+                            }
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </NumericField>
+              <NumericField id="ean_clone" caption="Ean Clone" visible="false" type="number"></NumericField>
+              <NumericField id="transfpaltura" caption="Camada Transf" type="number">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function run(){
+                            var paltura = engine.getField('transfpaltura').getValue();
+                            if(paltura){
+                              if(paltura < 0.100 || paltura > 999999){
+                                  engine.getField('paltura').setValue(null);
+                                  MessageBox.show('Altura Pallet Transf. Inválida!');
+                              }
+                            }
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </NumericField>
+              <DecimalField id="quantidade_conf" type="decimal" caption="Quantidade" visible="false">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[ 
+                        function run(){
+                          var qtd = engine.getField('quantidade_conf').getValue();
+
+                          if(!qtd || qtd < 0.001 || qtd > 800000) {
+                            MessageBox.show('Atenção!','Quantidade Inválida!');
+                            engine.getField('quantidade_conf').setValue(null);
+                          }else{
+                            engine.getField('datavalidade').focus();
+                          }
+
+                        }
+                      ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </DecimalField>
+              <DateField id="datavalidade" caption="Vencimento" resolution="DAY"
+                required="false" type="date" visible="false">
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[ 
+                          function run(){
+                            var validade = engine.getField('datavalidade').getConvertedValue();
+                            var diff =  moment().diff(validade, 'years');
+                            if(diff > 5){
+                              MessageBox.show('Atenção','Data Inválida');
+                              engine.getField('datavalidade').setValue(null);
+                              return;
+                            }
+                          }
+                        ]]>
+                    </script>
+                  </valueChange>
+                </events>
+              </DateField>
+              <!-- Campos conferência Ocultos -->
+              <ComboBox id="motivos" caption="Motivo não conferência" type="string"
+                visible="true">
+                <entry value="Erro de leitura" key="ERROLEITURA" />
+                <entry value="EAN 13 inválido" key="EAN13INVALIDO" />
+                <entry value="Produto não encontrado" key="PRODUTO NAO ENCONTRADO" />
+                <entry value="Ean não cadastrado" key="EAN NAO CADASTRADO" />
+                <events>
+                  <valueChange>
+                    <script language="JavaScript">
+                      <![CDATA[
+                        function naoConferencia(){
+                            console.log(engine.getField('motivos').getValue())
+                            if (engine.getField('motivos').getValue() != null){
+                              engine.getField('confean13').setRequired(false);
+                              engine.getField('qtdemb').setRequired(false);
+                              engine.getField('quantidade_conf').setRequired(false);
+                            }else{
+                              engine.getField('confean13').setRequired(true);
+                              engine.getField('qtdemb').setRequired(true);
+
+                            }
+                        }
+                        function apagarCampos(){
+                            engine.getField('confean13').setValue(null);
+                            engine.getField('dun14').setValue(null);
+                            engine.getField('qtdemb').setValue(null);
+                            engine.getField('pesobruto').setValue(null);
+                            engine.getField('altura').setValue(null);
+                            engine.getField('largura').setValue(null);
+                            engine.getField('compr').setValue(null);
+                            engine.getField('plbase').setValue(null);
+                            engine.getField('plaltura').setValue(null);
+                            engine.getField('embtransf').setValue(null);
+                        }
+                        function run(){
+                            naoConferencia();
+                            apagarCampos();
+                        }
+                      ]]>
+                  </script>
+                  </valueChange>
+                </events>
+              </ComboBox>
+              <!-- <TextField id='EAN_CLONE' visible='false' type='string' /> -->
+              <TextField id="flagceasa" type="string" visible="false" enabled="false"/>
+            </VerticalLayout>
+          </components>
+        </SubForm>
+      </VerticalLayout>
+    </components>
+  </form>
+</mobile-forms>
