@@ -37,7 +37,6 @@ def handle_file_upload(uploaded_files):
             save_uploaded_file(uploaded_file)
 
 
-
 def awser_question_based_on_pdf(uploaded_files, question=None):
     if uploaded_files:
         all_text = ""
@@ -52,7 +51,8 @@ def awser_question_based_on_pdf(uploaded_files, question=None):
         if question:
             answer = handling_pdfs.find_similar_question(question, index, sentences)
             st.write(f"Resposta: {answer}")
-
+            
+os.makedirs("uploaded_pdfs", exist_ok=True)
 uploaded_files = st.file_uploader("Escolha arquivos PDF para anexar", accept_multiple_files=True, type=["pdf"])
 handle_file_upload(uploaded_files)
 
