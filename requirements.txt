@@ -2,3 +2,5 @@ streamlit
 openai
 google-generativeai
 PyMuPDF
+faiss-cpu
+sentence-transformers
