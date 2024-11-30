@@ -2,7 +2,6 @@ import streamlit as st
 import google.generativeai as genai
 import handling_pdfs
 import os
-# Import the OpenAI library.
 # Show title and description.
 st.title("💬 Chatbot")
 st.markdown(
@@ -66,10 +65,10 @@ if prompt := st.chat_input("E aí?"):
     with st.chat_message("user"):
         st.markdown(prompt)
     if not uploaded_files:
-        # Generate a response using the OpenAI API.
+        # Generate a response using the Genai API.
         stream = model.generate_content(prompt)
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
+        # Stream the response to the chat using `st.write`, then store it in 
         # session state.
         with st.chat_message("assistant"):
             response = st.write(stream.text)
