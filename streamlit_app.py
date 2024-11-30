@@ -9,11 +9,6 @@ st.markdown(
 )
 key = 'AIzaSyA7IywZsH4XRjUopxTLpG7jmqPAQoLzyHI'
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-# openai_api_key = st.text_input("OpenAI API Key", type="password")
-
 API_KEY = key
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
 genai.configure(api_key=API_KEY)
@@ -23,22 +18,15 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Função para lidar com o upload de arquivos
-def handle_file_upload(uploaded_file):
-    if uploaded_file is not None:
-        # Faça algo com o arquivo carregado
-        st.write(f"Arquivo carregado: {uploaded_file.name}")
-        # Você pode salvar o arquivo, processá-lo, etc.
-        # Por exemplo, para salvar o arquivo:
-        with open(uploaded_file.name, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        return uploaded_file.name
-    return None
+def handle_file_upload(uploaded_files):
+    # Mostrar os nomes dos arquivos carregados
+    if uploaded_files:
+        st.markdown("### Arquivos PDF carregados:")
+        for uploaded_file in uploaded_files:
+            st.text(uploaded_file.name)
 
-# Adicionando a funcionalidade de upload de arquivos
-uploaded_file = st.file_uploader("Escolha um arquivo para anexar")
+uploaded_files = st.file_uploader("Escolha arquivos PDF para anexar", accept_multiple_files=True, type=["pdf"])
 
-# Processando o arquivo carregado
-file_name = handle_file_upload(uploaded_file)
 
 # Create a chat input field to allow the user to enter a message. This will display
 # automatically at the bottom of the page.
@@ -57,7 +45,3 @@ if prompt := st.chat_input("E aí?"):
     with st.chat_message("assistant"):
         response = st.write(stream.text)
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-    # Se um arquivo foi carregado, adicione-o à mensagem
-    if file_name:
-        st.session_state.messages.append({"role": "assistant", "attachment": file_name})
