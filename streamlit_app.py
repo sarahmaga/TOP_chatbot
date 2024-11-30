@@ -9,7 +9,7 @@ st.markdown(
    "Faça uma pergunta e eu responderei com a melhor resposta possível!  \n"
    "É possível mandar um conjunto de pdfs para que eu possa responder com base neles."
 )
-key = 'AIzaSyA7IywZsH4XRjUopxTLpG7jmqPAQoLzyHI'
+key = 'AIzaSyDlroY8fjB1bt-eS2Tro9_zUNhgNu_mRc8'
 
 API_KEY = key
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
